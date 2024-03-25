@@ -1,11 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take a Quiz</title>
+    <link rel="stylesheet" href="navbar.css">
+    <link rel="stylesheet" href="general.css">
+    <style>
+        .quiz-container {
+            margin-top: 20px;
+        }
+
+        .quiz-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .quiz-question {
+            margin-bottom: 20px;
+        }
+
+        .quiz-navigation {
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-  
+    <ul class="topnav" id="topMenu">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="add-question.html">Add questions</a></li>
+        <li><a href="make-a-quiz.html">Create a quiz</a></li>
+        <li><a class="active" href="take-a-quiz.html">Take a quiz</a></li>
+        <li class="right"><a href="#about">About</a></li>
+    </ul>
+
+    <div class="quiz-container">
+        <h2>Available Quizzes</h2>
+        <div id="quizList"></div>
+    </div>
+
+    <div id="quizDisplay" class="quiz-container" style="display: none;">
+        <h2 class="quiz-title" id="quizTitle"></h2>
+        <div class="quiz-question">
+            <p id="questionText"></p>
+        </div>
+        <div class="quiz-navigation">
+            <button onclick="prevQuestion()" data-action="prev" style="display: none;">Previous</button>
+            <button onclick="nextQuestion()" data-action="next">Next</button>
+        </div>
+    </div>
+
+    <script>
+        let host = "http://localhost:8080";
+        let quizzes = [];
+
+        async function getAllQuizzes() {
+            let response = await fetch(host + "/quizzes");
+            let result = await response.json();
+            return result;
+        }
+
+        async function displayQuizzes() {
+            quizzes = await getAllQuizzes();
+            let quizList = document.getElementById("quizList");
+            quizList.innerHTML = "";
+            quizzes.forEach(quiz => {
+                let div = document.createElement("div");
+                div.innerHTML = `<p><a href="#" onclick="startQuiz(${quiz.id})">${quiz.title}</a></p>`;
+                quizList.appendChild(div);
+            });
+        }
+
+        async function startQuiz(quizId) {
+            let response = await fetch(host + "/quiz/" + quizId);
+            let quizData = await response.json();
+            let quizTitle = document.getElementById("quizTitle");
+            let questionText = document.getElementById("questionText");
+
+            quizTitle.innerText = quizData.title;
+            questionText.innerText = "";
+            document.getElementById("quizDisplay").style.display = "block";
+            document.getElementById("topMenu").style.display = "none";
+
+            let currentQuestionIndex = 0;
+
+            function displayQuestion() {
+                let question = quizData.questions[currentQuestionIndex];
+                questionText.innerText = question.description;
+
+                // Show/hide Previous button based on current question index
+                document.querySelector('button[data-action="prev"]').style.display = currentQuestionIndex === 0 ? 'none' : 'inline-block';
+
+                // Show/hide Next button based on current question index
+                if (currentQuestionIndex === quizData.questions.length - 1) {
+                    document.querySelector('button[data-action="next"]').innerText = "Finish";
+                } else {
+                    document.querySelector('button[data-action="next"]').innerText = "Next";
+                }
+            }
+
+            displayQuestion();
+
+            window.prevQuestion = function() {
+                if (currentQuestionIndex > 0) {
+                    currentQuestionIndex--;
+                    displayQuestion();
+                }
+            };
+
+            window.nextQuestion = function() {
+                if (currentQuestionIndex < quizData.questions.length - 1) {
+                    currentQuestionIndex++;
+                    displayQuestion();
+                } else {
+                    document.getElementById("quizDisplay").style.display = "none";
+                    document.getElementById("topMenu").style.display = "block"; // Show top menu
+                    alert("Quiz Completed! Display Score here.");
+                }
+            };
+        }
+
+        // Call displayQuizzes when the page loads
+        displayQuizzes();
+    </script>
 </body>
 </html>
